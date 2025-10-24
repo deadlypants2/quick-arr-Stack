@@ -50,6 +50,7 @@ services:
     ports:
       - '9696:9696' #uncomment if you are not using the VPN
 
+
   sonarr:
     container_name: sonarr
     image: 'lscr.io/linuxserver/sonarr:latest'
@@ -62,7 +63,7 @@ services:
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/sonarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${HDDSTORAGE}:/MediaCenterBox
   radarr:
     container_name: radarr
     image: 'lscr.io/linuxserver/radarr:latest'
@@ -76,7 +77,7 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/radarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
-      
+   
   bazarr:
     container_name: bazarr
     image: 'lscr.io/linuxserver/bazarr:latest'
@@ -92,47 +93,58 @@ services:
       - '${HDDSTORAGE}:/MediaCenterBox'
     ports:
       - '6767:6767'
-      
-  plex-server:
-    container_name: plex-server
-    image: 'plexinc/pms-docker:latest'
-    restart: unless-stopped
-    environment:
-      - 'TZ=${TZ}'
-    network_mode: host
+
+#Commented out because i will be using jellyfin instead of plex because of a better stability in the OSS state
+#  plex-server:
+#    container_name: plex-server
+#    image: 'plexinc/pms-docker:latest'
+#    restart: unless-stopped
+#    environment:
+#      - 'TZ=${TZ}'
+#    network_mode: host
+#    volumes:
+#      - '${ROOT}/MediaCenter/config/plex/db:/config'
+#      - '${ROOT}/MediaCenter/config/plex/transcode:/transcode'
+#      - '${HDDSTORAGE}/Completed:/MediaCenterBox'
+
+
+#TODO
+#double check every variable and path due to being copy pasted from the jellyfin wiki.
+
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    user: uid:gid
+    ports:
+      - 8096:8096/tcp
+      - 7359:7359/udp
     volumes:
-      - '${ROOT}/MediaCenter/config/plex/db:/config'
-      - '${ROOT}/MediaCenter/config/plex/transcode:/transcode'
-      - '${HDDSTORAGE}/Completed:/MediaCenterBox'
+      - /path/to/config:/config
+      - /path/to/cache:/cache
+      - type: bind
+        source: /path/to/media
+        target: /media
+      - type: bind
+        source: /path/to/media2
+        target: /media2
+        read_only: true
+      # Optional - extra fonts to be used during transcoding with subtitle burn-in
+      - type: bind
+        source: /path/to/fonts
+        target: /usr/local/share/fonts/custom
+        read_only: true
+    restart: 'unless-stopped'
+    # Optional - alternative address used for autodiscovery
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://example.com
+    # Optional - may be necessary for docker healthcheck to pass if running in host network mode
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
 
 
 ### Optional Containers
 
-  wireguard:
-    image: ghcr.io/linuxserver/wireguard:latest
-    container_name: wireguard
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PUID} # default user id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
-      - SERVERURL=${SERVERURL} # server public ip, auto to auto find, defined in .env
-      - SERVERPORT=51820 #optional
-      - PEERS=${PEERS} # number of clients to be auto configured, defined in .env
-      - PEERDNS=auto #optional
-      - INTERNAL_SUBNET=172.168.69.0 #optional, network for devices ips. CAN NOT be the same as your home network
-      - ALLOWEDIPS=0.0.0.0/0 #optional
-    volumes:
-      - ${ROOT}/MediaCenter/config/wireguard:/config # config folder
-      - /lib/modules:/lib/modules
-    ports:
-      - 51820:51820/udp
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: always
-  
   overseerr:
     image: 'sctx/overseerr:latest'
     container_name: overseerr
