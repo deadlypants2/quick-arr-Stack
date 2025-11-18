@@ -63,7 +63,7 @@ services:
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/sonarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox
+      - '${HDDSTORAGE}:/MediaCenterBox'
   radarr:
     container_name: radarr
     image: 'lscr.io/linuxserver/radarr:latest'
