@@ -17,22 +17,44 @@ services:
     devices:
       - '/dev/net/tun:/dev/net/tun'
     ports:
-      - '8112:8112' #deluge web UI Port
+      - '8080:8080' #qbittorrent web UI Port
+      - '6789:6789' #nzbget web UI Port
     command: '-f "" -r 192.168.68.0/24'
 
-  deluge:
-    container_name: deluge
-    image: 'lscr.io/linuxserver/deluge:latest'
-    restart: unless-stopped
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
     environment:
       - 'PUID=${PUID}'
       - 'PGID=${PGID}'
       - 'TZ=${TZ}'
     volumes:
-      - '${ROOT}/MediaCenter/config/deluge:/config'
+      - '${ROOT}/MediaCenter/nzbget/data:/config
       - '${HDDSTORAGE}:/MediaCenterBox'
-    #ports:
-    #  - '8112:8112' #uncomment if you are not using the VPN
+#    ports:                     #remove if no vpn
+#      - 6789:6789              #remove if no vpn
+    restart: unless-stopped
+    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
+    depends_on:                 #comment/remove if you are not using the VPN
+      - vpn                     #comment/remove if you are not using the VPN
+
+  
+  qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent
+    restart: unless-stopped
+    environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'TZ=${TZ}'
+      - TORRENTING_PORT=6881
+    volumes:
+      - '${ROOT}/MediaCenter/config/qbittorrent:/config'
+      - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+#      - 8080:8080              #remove comment if you are not using the VPN
+      - 6881:6881
+      - 6881:6881/udp
     network_mode: 'service:vpn' #comment/remove if you are not using the VPN
     depends_on:                 #comment/remove if you are not using the VPN
       - vpn                     #comment/remove if you are not using the VPN
@@ -41,8 +63,8 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment:
-      - PUID=1000
-      - PGID=1000
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
       - 'TZ=${TZ}'
     volumes:
       - '${ROOT}/MediaCenter/config/prowlarr:/config'
@@ -64,6 +86,7 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/sonarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
+
   radarr:
     container_name: radarr
     image: 'lscr.io/linuxserver/radarr:latest'
@@ -77,7 +100,21 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${ROOT}/MediaCenter/config/radarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
-   
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'TZ=${TZ}'
+    volumes:
+      - ${ROOT}/MediaCenter/config/lidarr:/config'
+      - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
   bazarr:
     container_name: bazarr
     image: 'lscr.io/linuxserver/bazarr:latest'
@@ -94,67 +131,38 @@ services:
     ports:
       - '6767:6767'
 
-#Commented out because i will be using jellyfin instead of plex because of a better stability in the OSS state
-#  plex-server:
-#    container_name: plex-server
-#    image: 'plexinc/pms-docker:latest'
-#    restart: unless-stopped
-#    environment:
-#      - 'TZ=${TZ}'
-#    network_mode: host
-#    volumes:
-#      - '${ROOT}/MediaCenter/config/plex/db:/config'
-#      - '${ROOT}/MediaCenter/config/plex/transcode:/transcode'
-#      - '${HDDSTORAGE}/Completed:/MediaCenterBox'
-
-
-#TODO
-#double check every variable and path due to being copy pasted from the jellyfin wiki.
-
-  jellyfin:
-    image: jellyfin/jellyfin
-    container_name: jellyfin
-    ports:
-      - 8096:8096/tcp
-#      - 7359:7359/udp  #used for client discovery. In my case not necesary since it will be behind a reverse proxy on https only
-    volumes:
-      - '${ROOT}/MediaCenter/config/jellyfin:/config'
-      - '${ROOT}/MediaCenter/config//jellyfin:/cache'
-      - type: bind
-        source: /path/to/media
-        target: /media
-      - type: bind
-        source: /path/to/media2
-        target: /media2
-        read_only: true
-      # Optional - extra fonts to be used during transcoding with subtitle burn-in
-#      - type: bind
-#        source: /path/to/fonts
-#        target: /usr/local/share/fonts/custom
-#        read_only: true
-    restart: 'unless-stopped'
-    # Optional - alternative address used for autodiscovery
-    environment:
-      - 'PUID=${PUID}'
-      - 'PGID=${PGID}'
-      - 'TZ=${TZ}'
-#      - JELLYFIN_PublishedServerUrl=http://example.com
-    # Optional - may be necessary for docker healthcheck to pass if running in host network mode
-#    extra_hosts:
-#      - 'host.docker.internal:host-gateway'
-
-
-
-### Optional Containers
-
-  overseerr:
-    image: 'sctx/overseerr:latest'
-    container_name: overseerr
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    init: true
+    container_name: jellyseerr
     environment:
       - LOG_LEVEL=debug
       - 'TZ=${TZ}'
+      - PORT=5055 #optional
     ports:
-      - '5055:5055'
+      - 5055:5055
     volumes:
-      - '${ROOT}/MediaCenter/config/overseerr/config:/app/config'
+      - '${ROOT}/MediaCenter/config/jellyseerr/config:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+    restart: unless-stopped
+
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=${LOG_FILE:-none}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - 'TZ=${TZ}'
+    ports:
+      - "${PORT:-8191}:8191"
+    volumes:
+      - '${ROOT}/MediaCenter/config/flaresolver:/config'
     restart: unless-stopped
