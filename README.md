@@ -67,27 +67,27 @@ This is composed of multiple tools working together to have an automated way to 
 **Downloaders**:
 
 - [OpenVPN Client](https://github.com/dperson/openvpn-client) (optional but highly recommended): the container is used by Deluge to encapsulate the incoming/outgoing traffic.
-- [Deluge](http://deluge-torrent.org/) handles torrent download.
+- [Qbittorrent](https://www.qbittorrent.org/) handles torrent download.
 - [Prowlarr](https://prowlarr.com/): is an indexer manager/proxy built on the popular *arr .net/reactjs base stack to integrate with your various PVR apps. Prowlarr supports the management of both Torrent Trackers and Usenet Indexers.
 - [Bazarr](https://www.bazarr.media/) is a companion application to Sonarr and Radarr. It manages and downloads subtitles based on your requirements. You define your preferences by TV show or movie and Bazarr takes care of everything for you.
+- [NZBget](https://nzbget.net/documentation) handels nzb download.
 
 **Download orchestration**:
 
 - [Sonarr](https://sonarr.tv): manage TV show, automatic downloads, sort & rename
 - [Radarr](https://radarr.video): basically the same as Sonarr, but for movies
+- [Lidarr](https://lidarr.audio/): basicly the same as above but for music.
 
 **Media Center**:
 
-- [Plex](https://plex.tv): media center server with streaming transcoding features, useful plugins and a beautiful UI. Clients available for many systems (Linux/OSX/Windows, Web, Android, Chromecast, Android TV, etc.)
+- [Jellyfin](https://jellyfin.org/): media center server with streaming transcoding features, useful plugins and a beautiful UI. Clients available for many systems (Linux/OSX/Windows, Web, Android, Chromecast, Android TV, etc.)
 
 
 **Optional**:
 
-- [Overseerr](https://overseerr.dev/):  is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Plex!
+- [Jellyseerr](https://docs.seerr.dev/):  is a free and open source software application for managing requests for your media library. It integrates with your existing services, such as Sonarr, Radarr, and Jellyfin!
 
-- [Wireguard](https://github.com/linuxserver/docker-wireguard): is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. This will allow us to connect to our home network  from anywhere and use the Plex app outside of our house without using Plex servers for routing.
-
-- [Portainer](https://github.com/portainer/portainer): This is a lightweight service that allows us to monitor all of our containers, we can see the status, logs and manage them directly there.
+- [Flaresolvarr](https://github.com/FlareSolverr/FlareSolverr): is used to bypass cloudflare. This application is spotty at best and will need manual interventaion at times but is better then nothing
 
 ## Hardware configuration
 
@@ -222,15 +222,15 @@ This must come up with some safety features:
 
 Configuration is explained on the [project page](https://github.com/dperson/openvpn-client), you can follow it.
 However, it is not that easy depending on your VPN server settings.
-I'm using a purevpn.com VPN, so here is how I set it up.
+I'm using protonvpn, so here is how I set it up.
 
 
-#### purevpn.com custom setup
+#### protonvpn custom setup
 
-_Note_: this section only applies for [PureVPN](purevpn.com) accounts.
+_Note_: this section only applies for [Protonvpn](https://protonvpn.com/) accounts.
 
-1. Delete all content in `${ROOT}/config/vpn` and replace it with the ones available in the repo folder `Config Files\config\vpn(PureVPN)`
-1. Download the openVPN file from [PureVPN website](https://support.purevpn.com/openvpn-files).
+1. Delete all content in `${ROOT}/config/vpn` and replace it with the ones available in the repo folder `Config Files\config\vpn`
+1. Download the openVPN file from [Protonvpn website](https://account.protonvpn.com/downloads).
 1. Open the file in the udp folder related to the country/connection that you want to use.
 1. Copy the remote value in the file and replace it on the vpn.conf file that now is in `${ROOT}/config/vpn`
 
@@ -248,15 +248,18 @@ Your docker-compose file should have something like this:
       - 'OTHER_ARGS= --mute-replay-warnings'
     cap_add:
       - net_admin
+      - SYS_MODULE
     restart: unless-stopped
     volumes:
       - '${ROOT}/MediaCenter/config/vpn:/vpn'
+      - /lib/modules:/lib/modules
     security_opt:
       - 'label:disable'
     devices:
       - '/dev/net/tun:/dev/net/tun'
     ports:
-      - '8112:8112' #deluge web UI Port
+      - '8080:8080' #qbittorrent web UI Port
+      - '6789:6789' #nzbget web UI Port
     command: '-f "" -r 192.168.68.0/24'
 
 ```
@@ -270,35 +273,40 @@ every time that you do changes in the VPN config file run `docker-compose restar
 ***
 
 
-### Setup Deluge
+### Setup Qbittorrent
 
 
 
-#### Deluge Docker container
+#### Qbittorrent Docker container
 
 _Note_: (Not Advised) If you don't own a VPN and want to use this without VPN  use the following compose, this WILL EXPOSE your real IP address.
 
 ```yaml
 
-deluge:
-    container_name: deluge
-    image: 'linuxserver/deluge:latest'
+qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent
     restart: unless-stopped
     environment:
-      - PUID=${PUID} # default user id, defined in .env
-      - PGID=${PGID} # default group id, defined in .env
-      - TZ=${TZ} # timezone, defined in .env
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'TZ=${TZ}'
+      - TORRENTING_PORT=6881
     volumes:
-      - '${ROOT}/MediaCenter/config/deluge:/config'  # config files
-      - '${HDDSTORAGE}:/MediaCenterBox'  # downloads folder
+      - '${ROOT}/MediaCenter/config/qbittorrent:/config'
+      - '${HDDSTORAGE}:/MediaCenterBox'
+    ports:
+#      - 8080:8080              #remove comment if you are not using the VPN
+      - 6881:6881
+      - 6881:6881/udp
     network_mode: 'service:vpn' #comment/remove if you are not using the VPN
     depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     # run on the vpn network #comment/remove if you are not using the VPN
+      - vpn                     #comment/remove if you are not using the VPN
 
 ```
 
 
-#### Deluge Configuration
+#### Qbittorrent Configuration
 
 _Note_: If the bellow page does not open and you are using the VPN normally it means that something is wrong with the VPN itself!
 
