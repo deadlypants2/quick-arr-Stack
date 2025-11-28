@@ -2,7 +2,7 @@ version: '3.4'
 services:
   vpn:
     container_name: vpn
-    image: 'dperson/openvpn-client:latest'
+    image: 'dperson/openvpn-client'
     environment:
       - 'OTHER_ARGS= --mute-replay-warnings'
     cap_add:
@@ -22,7 +22,7 @@ services:
     command: '-f "" -r 192.168.68.0/24'
 
   nzbget:
-    image: lscr.io/linuxserver/nzbget:latest
+    image: lscr.io/linuxserver/nzbget
     container_name: nzbget
     environment:
       - 'PUID=${PUID}'
@@ -60,7 +60,7 @@ services:
       - vpn                     #comment/remove if you are not using the VPN
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
+    image: lscr.io/linuxserver/prowlarr
     container_name: prowlarr
     environment:
       - 'PUID=${PUID}'
@@ -75,7 +75,7 @@ services:
 
   sonarr:
     container_name: sonarr
-    image: 'lscr.io/linuxserver/sonarr:latest'
+    image: 'lscr.io/linuxserver/sonarr'
     restart: unless-stopped
     network_mode: host
     environment:
@@ -89,7 +89,7 @@ services:
 
   radarr:
     container_name: radarr
-    image: 'lscr.io/linuxserver/radarr:latest'
+    image: 'lscr.io/linuxserver/radarr'
     restart: unless-stopped
     network_mode: host
     environment:
@@ -102,7 +102,7 @@ services:
       - '${HDDSTORAGE}:/MediaCenterBox'
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:latest
+    image: lscr.io/linuxserver/lidarr
     container_name: lidarr
     environment:
       - 'PUID=${PUID}'
@@ -117,7 +117,7 @@ services:
 
   bazarr:
     container_name: bazarr
-    image: 'lscr.io/linuxserver/bazarr:latest'
+    image: 'lscr.io/linuxserver/bazarr'
     restart: unless-stopped
     #network_mode: host
     environment:
@@ -132,7 +132,7 @@ services:
       - '6767:6767'
 
   jellyseerr:
-    image: ghcr.io/fallenbagel/jellyseerr:latest
+    image: ghcr.io/fallenbagel/jellyseerr
     init: true
     container_name: jellyseerr
     environment:
@@ -153,7 +153,7 @@ services:
 
   flaresolverr:
     # DockerHub mirror flaresolverr/flaresolverr:latest
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr
     container_name: flaresolverr
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
