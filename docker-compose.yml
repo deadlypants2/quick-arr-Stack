@@ -51,7 +51,7 @@ services:
     volumes:
       - '${ROOT}/MediaCenter/config/qbittorrent:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
-    ports:
+#    ports:
 #      - 8080:8080              #remove comment if you are not using the VPN
 #      - 6881:6881
 #      - 6881:6881/udp
