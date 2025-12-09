@@ -18,7 +18,6 @@ services:
       - '/dev/net/tun:/dev/net/tun'
     ports:
       - '8080:8080' #qbittorrent web UI Port
-      - '6789:6789' #nzbget web UI Port
     command: '-f "" -r 192.168.68.0/24'
 
   nzbget:
@@ -31,13 +30,9 @@ services:
     volumes:
       - '${ROOT}/MediaCenter/nzbget/data:/config
       - '${HDDSTORAGE}:/MediaCenterBox'
-#    ports:                     #remove if no vpn
-#      - 6789:6789              #remove if no vpn
+    ports:                     
+      - 6789:6789              
     restart: unless-stopped
-    network_mode: 'service:vpn' #comment/remove if you are not using the VPN
-    depends_on:                 #comment/remove if you are not using the VPN
-      - vpn                     #comment/remove if you are not using the VPN
-
   
   qbittorrent:
     container_name: qbittorrent
@@ -101,19 +96,19 @@ services:
       - '${ROOT}/MediaCenter/config/radarr:/config'
       - '${HDDSTORAGE}:/MediaCenterBox'
 
-  lidarr:
-    image: lscr.io/linuxserver/lidarr
-    container_name: lidarr
-    environment:
-      - 'PUID=${PUID}'
-      - 'PGID=${PGID}'
-      - 'TZ=${TZ}'
-    volumes:
-      - ${ROOT}/MediaCenter/config/lidarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
-    ports:
-      - 8686:8686
-    restart: unless-stopped
+#  lidarr:
+#    image: lscr.io/linuxserver/lidarr
+#    container_name: lidarr
+#    environment:
+#      - 'PUID=${PUID}'
+#      - 'PGID=${PGID}'
+#      - 'TZ=${TZ}'
+#    volumes:
+#      - ${ROOT}/MediaCenter/config/lidarr:/config'
+#      - '${HDDSTORAGE}:/MediaCenterBox'
+#    ports:
+#      - 8686:8686
+#    restart: unless-stopped
 
   bazarr:
     container_name: bazarr
@@ -151,18 +146,20 @@ services:
       retries: 3
     restart: unless-stopped
 
-  flaresolverr:
-    # DockerHub mirror flaresolverr/flaresolverr:latest
-    image: ghcr.io/flaresolverr/flaresolverr
-    container_name: flaresolverr
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_FILE=${LOG_FILE:-none}
-      - LOG_HTML=${LOG_HTML:-false}
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
-      - 'TZ=${TZ}'
-    ports:
-      - "${PORT:-8191}:8191"
-    volumes:
-      - '${ROOT}/MediaCenter/config/flaresolver:/config'
-    restart: unless-stopped
+#Remove comments if needed
+
+#  flaresolverr:
+#    # DockerHub mirror flaresolverr/flaresolverr:latest
+#    image: ghcr.io/flaresolverr/flaresolverr
+#    container_name: flaresolverr
+#    environment:
+#      - LOG_LEVEL=${LOG_LEVEL:-info}
+#      - LOG_FILE=${LOG_FILE:-none}
+#      - LOG_HTML=${LOG_HTML:-false}
+#      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+#      - 'TZ=${TZ}'
+#    ports:
+#      - "${PORT:-8191}:8191"
+#    volumes:
+#      - '${ROOT}/MediaCenter/config/flaresolver:/config'
+#    restart: unless-stopped
