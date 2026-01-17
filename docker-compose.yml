@@ -10,7 +10,7 @@ services:
       - SYS_MODULE
     restart: unless-stopped
     volumes:
-      - '${ROOT}/MediaCenter/config/vpn:/vpn'
+      - '${ROOT}/config/vpn:/vpn'
       - /lib/modules:/lib/modules
     security_opt:
       - 'label:disable'
@@ -28,8 +28,8 @@ services:
       - 'PGID=${PGID}'
       - 'TZ=${TZ}'
     volumes:
-      - '${ROOT}/MediaCenter/nzbget/data:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${ROOT}/nzbget/data:/config'
+      - '${HDDSTORAGE}/usenet:${HDDSTORAGE}/usenet'
     ports:                     
       - 6789:6789              
     restart: unless-stopped
@@ -44,8 +44,8 @@ services:
       - 'TZ=${TZ}'
 #      - TORRENTING_PORT=6881
     volumes:
-      - '${ROOT}/MediaCenter/config/qbittorrent:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${ROOT}/config/qbittorrent:/config'
+      - '${HDDSTORAGE}/torrent:${HDDSTORAGE}/torrent'
 #    ports:
 #      - 8080:8080              #remove comment if you are not using the VPN
 #      - 6881:6881
@@ -62,7 +62,7 @@ services:
       - 'PGID=${PGID}'
       - 'TZ=${TZ}'
     volumes:
-      - '${ROOT}/MediaCenter/config/prowlarr:/config'
+      - '${ROOT}/config/prowlarr:/config'
     restart: unless-stopped
     ports:
       - '9696:9696' #uncomment if you are not using the VPN
@@ -79,8 +79,8 @@ services:
       - 'TZ=${TZ}'
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
-      - '${ROOT}/MediaCenter/config/sonarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${ROOT}/config/sonarr:/config'
+      - '${HDDSTORAGE}:{HDDSTORAGE}'
 
   radarr:
     container_name: radarr
@@ -93,22 +93,22 @@ services:
       - 'TZ=${TZ}'
     volumes:
       - '/etc/localtime:/etc/localtime:ro'
-      - '${ROOT}/MediaCenter/config/radarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${ROOT}/config/radarr:/config'
+      - '${HDDSTORAGE}:{HDDSTORAGE}'
 
-#  lidarr:
-#    image: lscr.io/linuxserver/lidarr
-#    container_name: lidarr
-#    environment:
-#      - 'PUID=${PUID}'
-#      - 'PGID=${PGID}'
-#      - 'TZ=${TZ}'
-#    volumes:
-#      - ${ROOT}/MediaCenter/config/lidarr:/config'
-#      - '${HDDSTORAGE}:/MediaCenterBox'
-#    ports:
-#      - 8686:8686
-#    restart: unless-stopped
+  lidarr:
+    image: lscr.io/linuxserver/lidarr
+    container_name: lidarr
+    environment:
+      - 'PUID=${PUID}'
+      - 'PGID=${PGID}'
+      - 'TZ=${TZ}'
+    volumes:
+      - ${ROOT}/config/lidarr:/config'
+      - '${HDDSTORAGE}:'
+    ports:
+      - 8686:8686
+    restart: unless-stopped
 
   bazarr:
     container_name: bazarr
@@ -121,8 +121,8 @@ services:
       - 'TZ=${TZ}'
       - UMASK_SET=022
     volumes:
-      - '${ROOT}/MediaCenter/config/bazarr:/config'
-      - '${HDDSTORAGE}:/MediaCenterBox'
+      - '${ROOT}/config/bazarr:/config'
+      - '${HDDSTORAGE}:{HDDSTORAGE}'
     ports:
       - '6767:6767'
 
@@ -137,7 +137,7 @@ services:
     ports:
       - 5055:5055
     volumes:
-      - '${ROOT}/MediaCenter/config/jellyseerr/config:/app/config'
+      - '${ROOT}/config/jellyseerr/config:/app/config'
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
       start_period: 20s
@@ -145,6 +145,72 @@ services:
       interval: 15s
       retries: 3
     restart: unless-stopped
+
+listsync-full:
+    image: ghcr.io/woahai321/list-sync:main
+    container_name: listsync-full
+    ports:
+      # Frontend (Nuxt 3 Dashboard) 
+      - "3222:3222"
+      # Backend API (FastAPI)
+      - "4222:4222"
+    environment:
+      # Timezone Configuration (set to Europe/London for BST/GMT, change as needed)
+      # Timezone - Supports: IANA names (Europe/Paris), abbreviations (CET), offsets (UTC+1, GMT-5)
+      - 'TZ=${TZ}'
+      
+      # Overseerr Configuration 
+      - OVERSEERR_URL=${OVERSEERR_URL:-}
+      - OVERSEERR_API_KEY=${OVERSEERR_API_KEY:-}
+      - OVERSEERR_USER_ID=${OVERSEERR_USER_ID:-1}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-24}
+      - AUTOMATED_MODE=true
+      - OVERSEERR_4K=${OVERSEERR_4K:-false}
+      
+      # List Configuration (comma-separated)
+      - IMDB_LISTS=${IMDB_LISTS:-}
+      - TRAKT_LISTS=${TRAKT_LISTS:-}
+      - LETTERBOXD_LISTS=${LETTERBOXD_LISTS:-}
+      - ANILIST_LISTS=${ANILIST_LISTS:-}
+      - MDBLIST_LISTS=${MDBLIST_LISTS:-}
+      - STEVENLU_LISTS=${STEVENLU_LISTS:-}
+      - TRAKT_SPECIAL_LISTS=${TRAKT_SPECIAL_LISTS:-}
+      - TRAKT_SPECIAL_ITEMS_LIMIT=${TRAKT_SPECIAL_ITEMS_LIMIT:-}
+      
+      # Trakt API Configuration
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
+
+      # Optional Discord webhook
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      
+      # Internal API URL for frontend (Nuxt Nitro proxy handles /api internally)
+      - NUXT_PUBLIC_API_URL=${NUXT_PUBLIC_API_URL:-http://0.0.0.0:4222}
+      
+      # Docker-specific settings
+      - RUNNING_IN_DOCKER=true
+      - NO_SANDBOX=1
+      - DISPLAY=:99
+    volumes:
+      # Persist data directory
+      - '${ROOT}/config/listsync:/usr/src/app/data'
+      # Mount environment file
+      - ./.env:/usr/src/app/.env
+      # Optional: Mount logs for debugging
+      - '${ROOT}/logs/listsync:/var/log/supervisor
+    restart: unless-stopped 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4222/api/system/health", "&&", "curl", "-f", "http://localhost:3222"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Note: Complete ListSync application with:
+    # - Core sync service (python -m list_sync)
+    # - FastAPI backend (port 4222)
+    # - Nuxt 3 frontend (port 3222)
+    # All managed by supervisor for reliability 
+
+
 
 #Remove comments if needed
 
@@ -161,5 +227,5 @@ services:
 #    ports:
 #      - "${PORT:-8191}:8191"
 #    volumes:
-#      - '${ROOT}/MediaCenter/config/flaresolver:/config'
+#      - '${ROOT}/config/flaresolver:/config'
 #    restart: unless-stopped
